@@ -1,0 +1,29 @@
+This Python script generates directed graphs from LaTeX documents which show dependencies between theorems.
+
+Originally, it was written for use in my diploma thesis (which is finished now), but I may continue
+development if there is interest.
+
+The documentation is from the appendix of my thesis and is currently only available in German. But looking
+at the source code, you should be able to quickly see what happens.
+
+HOW TO USE:
+
+Make sure GraphViz is installed, then execute:
+  generate-graphs.py your-file.tex
+Configuration is done at the beginnig of the script file.
+
+Also, you will have to do some changes to your LaTeX document, to produce good and readable results. Define
+the following commands and use them in your theorem environments to fine-tune the graph:
+
+  \newcommand{\graphref}[1]{\unskip\vphantom{\ref{#1}}}    - Adds a \ref which only shows up in the graph
+  \newcommand{\graphcaption}[1]{\unskip}                   - Sets the caption of the corresponding node
+  \newcommand{\invref}[1]{\unskip\vphantom{\ref{#1}}}      - Adds an invisible edge to the graph (can be
+                                                             used to influence the layout)
+
+What you should know before usage:
+
+- The script will only work correctly when you have organized your file into chapters and use chapter-level
+  numbering of theorems. Otherwise you will have to change the code related to numbering.
+- \includes are being followed, but only one level. Deeper includes won't currently work.
+- When you run the script for the first time, expect no miracles. It can take a lot of time to make a graph
+  look really good.
