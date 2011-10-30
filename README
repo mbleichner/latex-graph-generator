@@ -1,16 +1,17 @@
-This Python script generates directed graphs from LaTeX documents which show dependencies between theorems.
+This Python script generates directed graphs from LaTeX documents to show dependencies between theorems.
 
 Originally, it was written for use in my diploma thesis (which is finished now), but I may continue
 development if there is interest.
 
-The documentation is from the appendix of my thesis and is currently only available in German. But looking
+The documentation is taken from the appendix of my thesis and currently only available in German. But looking
 at the source code, you should be able to quickly see what happens.
 
 HOW TO USE:
 
+First, look at the configuration options in the beginning of the script file.
+
 Make sure GraphViz is installed, then execute:
   generate-graphs.py your-file.tex
-Configuration is done at the beginnig of the script file.
 
 Also, you will have to do some changes to your LaTeX document, to produce good and readable results. Define
 the following commands and use them in your theorem environments to fine-tune the graph:
@@ -22,8 +23,7 @@ the following commands and use them in your theorem environments to fine-tune th
 
 What you should know before usage:
 
-- The script will only work correctly when you have organized your file into chapters and use chapter-level
+- Numbers in the graph will only be correct if you have organized your file into chapters and use chapter-level
   numbering of theorems. Otherwise you will have to change the code related to numbering.
 - \includes are being followed, but only one level. Deeper includes won't currently work.
-- When you run the script for the first time, expect no miracles. It can take a lot of time to make a graph
-  look really good.
+- When you run the script for the first time, expect no miracles. It can take some time to make a grap look good.
