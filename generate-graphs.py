@@ -23,12 +23,19 @@ colors = {
   'chapter-5':   '#C4F9FF',
 }
 
+# environments that get a number
 numbered  = ['lemma', 'mainlemma', 'corollary', 'theorem', 'proposition', 'fact', 'result', 'remark', 'observation']
-graphable = ['lemma', 'mainlemma', 'corollary', 'theorem', 'proposition', 'fact', 'result', 'remark', 'observation']
-proofless = ['fact']
-refs      = ['graphref', 'prettyref', 'sideref', 'sideinfo']
 
-# Dateien öffnen und einlesen
+# environments that should be included in the graph
+graphable = ['lemma', 'mainlemma', 'corollary', 'theorem', 'proposition', 'fact', 'result', 'remark', 'observation']
+
+# environments that require no proof
+proofless = ['fact']
+
+# ref commands that produce edges in the graph
+refs      = ['ref', 'graphref', 'prettyref', 'vref']
+
+# open and read input file
 infilename = sys.argv[1]
 assert infilename.endswith('.tex')
 infile = codecs.open(infilename, 'r', encoding='latin-1')
@@ -36,12 +43,12 @@ infile = codecs.open(infilename, 'r', encoding='latin-1')
 content = ''.join([line for line in infile.readlines() if not line.startswith('#')])
 infile.close()
 
-# includes aufloesen
+# resolve includes
 for match in re.finditer(r'\\include\{(.+?)\}', content):
   fn = match.group(1)
   content = content.replace(match.group(0), ''.join(codecs.open(fn+".tex", 'r', encoding='latin-1').readlines()))
 
-# Tokens sammeln
+# parse tokens
 tokens = []
 for line in content.split('\n'):
   line = line.strip()
@@ -50,13 +57,13 @@ for line in content.split('\n'):
     token = (match.group(1), match.group(2))
     tokens.append(token)
 
-# Zähler und Variablen initialisieren
+# initialize counters and variables
 chapter = -1
 number  = 0
 nodes   = []
 active  = []
 
-# Über die Token iterieren und Informationen sammeln
+# iterate over tokens and collect information
 for i, (command, argument) in enumerate(tokens):
 
   if command == 'chapter':
@@ -71,8 +78,8 @@ for i, (command, argument) in enumerate(tokens):
 
   if command == 'begin' and argument in graphable:
     node = {}
-    node['id']        = 'theorem.%i.%i' % (chapter, number) # Latex-interne ID
-    node['label']     = 'autolabel:%i' % i                  # Benutzer-vergebene ID
+    node['id']        = 'theorem.%i.%i' % (chapter, number) # ID used in LaTeX .thm files
+    node['label']     = 'autolabel:%i' % i                  # label defined by \label{}
     node['type']      = argument
     node['chapter']   = chapter
     node['number']    = '%i.%i' % (chapter, number)
@@ -108,7 +115,7 @@ for i, (command, argument) in enumerate(tokens):
     nodes[-1]['invisible'].add(argument)
     print 'invref in chapter', chapter, ':', argument, '->', nodes[-1]['label']
 
-# Für schnelleren Zugriff indizieren
+# create indexes for faster access
 nodesByLabel = {}
 nodesByChapter = {}
 nodesById = {}
@@ -117,7 +124,7 @@ for node in nodes:
   nodesById[node['id']]           = node
   nodesByChapter[node['chapter']] = nodesByChapter[node['chapter']]+[node] if nodesByChapter.has_key(node['chapter']) else [node]
 
-# Seitenzahlen aus thm-Datei holen
+# extract page numbers from .thm file
 if os.path.isfile(infilename[:-4]+'.thm'):
   thmfile = codecs.open(infilename[:-4]+'.thm', 'r', encoding='latin-1')
   lines = [line.strip() for line in thmfile.readlines()]
@@ -127,14 +134,14 @@ if os.path.isfile(infilename[:-4]+'.thm'):
       nodesById[match.group(2)]['page'] = match.group(1)
   thmfile.close()
 
-# Tote Referenzen entfernen
+# remove dead references
 for node in nodes:
   for parentlabel in list(node['parents']):
     parentnode = nodesByLabel.get(parentlabel)
     if not parentnode:
       node['parents'].remove(parentlabel)
 
-# Zu jedem Knoten auch die Kinder berechnen
+# calculate the set of all (direct) children for every node
 for node in nodes:
   if not node.has_key('children'):
     node['children'] = set()
@@ -143,7 +150,7 @@ for node in nodes:
     parent = nodesByLabel[parentlabel]
     parent['children'].add(node['label'])
 
-# Vergänger zu jedem Knoten ermitteln
+# calculate the set of all ancestors of every node
 def get_ancestors(node):
   ancestors = set(node['parents'])
   for parentnode in [nodesByLabel[label] for label in node['parents']]:
@@ -153,7 +160,7 @@ for node in nodes:
   try: node['ancestors'] = get_ancestors(node)
   except: print "recursion in ancestors of node", node['label']
 
-# Transitiv implizierte Kanten entfernen
+# remove transitively implied edges
 for node in nodes:
   for parentnode in [nodesByLabel[label] for label in node['parents']]:
     if [label for label in parentnode['children'] if label in node['ancestors']]:
@@ -161,8 +168,7 @@ for node in nodes:
       node['parents'].remove(parentnode['label'])
       parentnode['children'].remove(node['label'])
 
-# Funktion zur Ausgabe einer .dot-Datei. Ausgegeben werden alle
-# angegebenen Knoten und deren direkte Vorgänger/Nachfolger.
+# outputs given nodes and all direct parents/children as dot-file.
 def draw_graph(nodes, outfilename):
   outfile = codecs.open(outfilename, 'w', encoding='utf-8')
   outfile.write("digraph Relations {\n")
@@ -187,12 +193,12 @@ def draw_graph(nodes, outfilename):
 
 generated_dot_files = []
 
-# Kompletten Graph zeichnen
+# draw a complete graph
 outfilename = "%s-complete.dot" % infilename[:-4]
 draw_graph(nodes, outfilename)
 generated_dot_files.append(outfilename)
 
-# Kapitel-Graphen zeichnen
+# draw graphs for every chapter
 for chapter, chapternodes in nodesByChapter.items():
   outfilename = "%s-chap%i.dot" % (infilename[:-4], chapter)
   labels_to_draw = set()
@@ -204,8 +210,8 @@ for chapter, chapternodes in nodesByChapter.items():
   draw_graph(nodes_to_draw, outfilename)
   generated_dot_files.append(outfilename)
 
-# Grafiken erzeugen
+# run GraphViz to generate graphics
 for filename in generated_dot_files:
   os.system('dot -Tpdf "%s" -o "%s.pdf"' % (filename, filename[:-4]))
   os.system('dot -Tpng "%s" -o "%s.png"' % (filename, filename[:-4]))
-  os.system('perl -e "s/%%PDF-1.5/%%PDF-1.4/" -p -i "%s.pdf"' % filename[:-4]) # Sonst beschwert sich LaTeX andauernd wegen der Version
+  os.system('perl -e "s/%%PDF-1.5/%%PDF-1.4/" -p -i "%s.pdf"' % filename[:-4]) # to avoid warnings in PDFtex
